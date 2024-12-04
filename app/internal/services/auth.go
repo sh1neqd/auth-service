@@ -1,6 +1,7 @@
 package services
 
 import (
+	"auth-service/app/internal/config"
 	"auth-service/app/internal/domain/authRefresh"
 	"auth-service/app/internal/domain/claimsAuth"
 	"encoding/base64"
@@ -77,20 +78,19 @@ func (s AuthService) GetRefreshToken(userID uuid.UUID) (*authRefresh.RefreshToke
 	return &refreshToken, nil
 }
 
-func (s AuthService) SendEmailWarning(userID uuid.UUID) {
+func (s AuthService) SendEmailWarning(config *config.Config) {
 
-	// стоят заглушки, потенциально из другого микросервиса отправлять стоит
-	userEmail := "*@example.com"
+	userEmail := config.EmailSender.UserEmail
 
-	from := ""
-	password := ""
+	from := config.EmailSender.SenderEmail
+	password := config.EmailSender.SenderPassword
 
 	to := []string{
 		userEmail,
 	}
 
-	smtpHost := ""
-	smtpPort := ""
+	smtpHost := config.EmailSender.SmtpHost
+	smtpPort := config.EmailSender.SmtpPort
 
 	message := []byte("Обнаружен вход с другого ip-адреса. Если это не Вы, то обратитесь в тех поддержку")
 

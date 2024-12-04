@@ -7,7 +7,7 @@ import (
 	"auth-service/app/pkg/client/postgresql"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
-	"log"
+	"log/slog"
 )
 
 func newApp() (*fiber.App, error) {
@@ -17,24 +17,24 @@ func newApp() (*fiber.App, error) {
 func StartApp(config *config.Config) {
 	app, err := newApp()
 
-	log.Println("postgresql initializing")
+	slog.Info("postgresql initializing")
 	db, err := postgresql.NewPostgresDB(config)
 	if err != nil {
-		log.Fatalf("failed to initilize db: %v", err)
+		slog.Error("failed to initialize db: ", err.Error())
 	}
 
-	log.Println("initialize services and handlers")
+	slog.Info("initialize services and handlers")
 	service := services.NewService(db)
-	handler := handlers.NewHandler(service, []byte(config.App.JwtSecret))
+	handler := handlers.NewHandler(service, config)
 
-	log.Println("initialize routes")
+	slog.Info("initialize routes")
 	handler.InitRoutes(app)
 	if err != nil {
-		log.Fatalf("failed to initilize routes: %v", err)
+		slog.Error("failed to initialize routes: ", err.Error())
 	}
 	port := config.App.Port
 	err = app.Listen(fmt.Sprintf(":%d", port))
 	if err != nil {
-		log.Fatal(err.Error())
+		slog.Error(err.Error())
 	}
 }

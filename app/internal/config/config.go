@@ -2,13 +2,12 @@ package config
 
 import (
 	"github.com/ilyakaznacheev/cleanenv"
-	"log"
+	"log/slog"
 	"sync"
 )
 
 type Config struct {
 	PostgresSQL struct {
-		//Host string `env:"PSQL_HOST"  env-default:"db"`
 		Host     string `yaml:"host" env:"PSQL_HOST"  env-default:"localhost"`
 		Port     int    `yaml:"port" env:"PSQL_PORT"  env-default:"5432"`
 		Username string `yaml:"username" env:"PSQL_USERNAME"  env-default:"postgres"`
@@ -18,28 +17,32 @@ type Config struct {
 	} `yaml:"database"`
 	App struct {
 		Port      int    `yaml:"port" env:"APP_PORT" env-default:"8000"`
-		JwtSecret string `yaml:"jwtSecret" env:"APP_JWT_SECRET" env-default:""`
+		JwtSecret string `yaml:"jwtSecret" env:"APP_JWT_SECRET"`
+		LogLevel  string `yaml:"log_level" env:"LOG_LEVEL" env-default:"info"`
 	} `yaml:"app"`
+	EmailSender struct {
+		SenderEmail    string `yaml:"sender_email"`
+		SenderPassword string `yaml:"sender_password"`
+		UserEmail      string `yaml:"user_email"`
+		SmtpHost       string `yaml:"smtp_host"`
+		SmtpPort       string `yaml:"smtp_port"`
+	} `yaml:"email_sender"`
 }
 
-var instance *Config
-var once sync.Once
+var (
+	instance *Config
+	once     sync.Once
+)
 
 func GetConfig() *Config {
 	once.Do(func() {
-		log.Println("read application configuration")
+		slog.Info("read application configuration")
 		instance = &Config{}
 		if err := cleanenv.ReadConfig("config.yml", instance); err != nil {
 			help, _ := cleanenv.GetDescription(instance, nil)
-			log.Println(help)
-			log.Fatalln(err)
+			slog.Info(help)
+			slog.Error("failed to read config", slog.String("err", err.Error()))
 		}
-		//if err := cleanenv.ReadConfig("config.yml", instance); err != nil {
-		//	helpText := "sh1neqd - car service"
-		//	help, _ := cleanenv.GetDescription(instance, &helpText)
-		//	log.Print(help)
-		//	log.Fatal(err)
-		//}
 	})
 	return instance
 }

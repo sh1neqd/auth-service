@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"auth-service/app/internal/config"
 	"auth-service/app/internal/domain/claimsAuth"
 	"auth-service/app/internal/services"
 	"database/sql"
@@ -14,12 +15,12 @@ import (
 )
 
 type Handler struct {
-	services  *services.Service
-	jwtSecret []byte
+	services *services.Service
+	cfg      *config.Config
 }
 
-func NewHandler(services *services.Service, jwtSecret []byte) *Handler {
-	return &Handler{services: services, jwtSecret: jwtSecret}
+func NewHandler(services *services.Service, cfg *config.Config) *Handler {
+	return &Handler{services: services, cfg: cfg}
 }
 
 func (h *Handler) InitRoutes(app *fiber.App) {
@@ -49,7 +50,7 @@ func (h *Handler) issueTokens(c *fiber.Ctx) error {
 		})
 	}
 
-	accessToken, err := h.services.CreateAccessToken(userUUID, clientIP, h.jwtSecret)
+	accessToken, err := h.services.CreateAccessToken(userUUID, clientIP, []byte(h.cfg.App.JwtSecret))
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "could not create access token",
@@ -85,7 +86,7 @@ func (h *Handler) refreshTokens(c *fiber.Ctx) error {
 	clientIP := c.IP()
 
 	token, err := jwt.ParseWithClaims(request.AccessToken, &claimsAuth.Claims{}, func(token *jwt.Token) (interface{}, error) {
-		return h.jwtSecret, nil
+		return []byte(h.cfg.App.JwtSecret), nil
 	})
 
 	if err != nil {
@@ -127,10 +128,10 @@ func (h *Handler) refreshTokens(c *fiber.Ctx) error {
 	}
 
 	if clientIP != claims.ClientIP {
-		h.services.SendEmailWarning(claims.UserID)
+		h.services.SendEmailWarning(h.cfg)
 	}
 
-	accessToken, err := h.services.CreateAccessToken(claims.UserID, clientIP, h.jwtSecret)
+	accessToken, err := h.services.CreateAccessToken(claims.UserID, clientIP, []byte(h.cfg.App.JwtSecret))
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "could not create access token",
